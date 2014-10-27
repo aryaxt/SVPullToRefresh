@@ -27,8 +27,9 @@
     // setup pull-to-refresh
     [self.tableView addPullToRefreshWithActionHandler:^{
         [weakSelf insertRowAtTop];
-    }];
-        
+    } progressHandler:^(CGFloat progress) {
+        NSLog(@"Progress: %f", progress);
+    } position:SVPullToRefreshPositionTop];
     // setup infinite scrolling
     [self.tableView addInfiniteScrollingWithActionHandler:^{
         [weakSelf insertRowAtBottom];

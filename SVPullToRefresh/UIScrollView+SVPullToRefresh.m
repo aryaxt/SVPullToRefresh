@@ -26,6 +26,7 @@ static CGFloat const SVPullToRefreshViewHeight = 60;
 @interface SVPullToRefreshView ()
 
 @property (nonatomic, copy) void (^pullToRefreshActionHandler)(void);
+@property (nonatomic, copy) void (^pullToRefreshProgressHandler)(CGFloat);
 
 @property (nonatomic, strong) SVPullToRefreshArrow *arrow;
 @property (nonatomic, strong) UIActivityIndicatorView *activityIndicatorView;
@@ -65,8 +66,7 @@ static char UIScrollViewPullToRefreshView;
 
 @dynamic pullToRefreshView, showsPullToRefresh;
 
-- (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler position:(SVPullToRefreshPosition)position {
-    
+- (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler progressHandler:(void (^)(CGFloat progress))progressHandler position:(SVPullToRefreshPosition)position {
     if(!self.pullToRefreshView) {
         CGFloat yOrigin;
         switch (position) {
@@ -81,6 +81,7 @@ static char UIScrollViewPullToRefreshView;
         }
         SVPullToRefreshView *view = [[SVPullToRefreshView alloc] initWithFrame:CGRectMake(0, yOrigin, self.bounds.size.width, SVPullToRefreshViewHeight)];
         view.pullToRefreshActionHandler = actionHandler;
+        view.pullToRefreshProgressHandler = progressHandler;
         view.scrollView = self;
         [self addSubview:view];
         
@@ -90,11 +91,14 @@ static char UIScrollViewPullToRefreshView;
         self.pullToRefreshView = view;
         self.showsPullToRefresh = YES;
     }
-    
+}
+
+- (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler position:(SVPullToRefreshPosition)position {
+    [self addPullToRefreshWithActionHandler:actionHandler progressHandler:nil position:position];
 }
 
 - (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler {
-    [self addPullToRefreshWithActionHandler:actionHandler position:SVPullToRefreshPositionTop];
+    [self addPullToRefreshWithActionHandler:actionHandler progressHandler:nil position:SVPullToRefreshPositionTop];
 }
 
 - (void)triggerPullToRefresh {
@@ -158,7 +162,7 @@ static char UIScrollViewPullToRefreshView;
 @implementation SVPullToRefreshView
 
 // public properties
-@synthesize pullToRefreshActionHandler, arrowColor, textColor, activityIndicatorViewColor, activityIndicatorViewStyle, lastUpdatedDate, dateFormatter;
+@synthesize pullToRefreshActionHandler, pullToRefreshProgressHandler, arrowColor, textColor, activityIndicatorViewColor, activityIndicatorViewStyle, lastUpdatedDate, dateFormatter;
 
 @synthesize state = _state;
 @synthesize scrollView = _scrollView;
@@ -412,6 +416,15 @@ static char UIScrollViewPullToRefreshView;
             self.state = SVPullToRefreshStateTriggered;
         else if(contentOffset.y <= scrollOffsetThreshold && self.state != SVPullToRefreshStateStopped && self.position == SVPullToRefreshPositionBottom)
             self.state = SVPullToRefreshStateStopped;
+        
+        if (contentOffset.y <= 0) {
+            CGFloat progress = fabs(MAX(contentOffset.y, scrollOffsetThreshold) / scrollOffsetThreshold);
+            
+            if (self.pullToRefreshProgressHandler) {
+                self.pullToRefreshProgressHandler(progress);
+            }
+        }
+        
     } else {
         CGFloat offset;
         UIEdgeInsets contentInset;
